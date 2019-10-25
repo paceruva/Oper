@@ -12,10 +12,9 @@ sem_t serfQueue;
 pthread_barrier_t barrier;
 int hackersCount;
 int serfsCount;
-int ran;
 int botes = 0;
 
-void board() {
+void board(int ran) {
   sem_wait(&impresion);
   printf("El proceso con tid = %d es un %s y abordó el bote.\n", syscall(SYS_gettid), (ran==0?"hacker":"serf"));
   sem_post(&impresion);
@@ -38,6 +37,9 @@ void hackers() {
     hackersCount = 0;
     capitan = 1;
   } else {
+    // sem_wait(&impresion);
+    // printf("No hay cuatro hackers\n");
+    // sem_post(&impresion);
     if (hackersCount == 2 && serfsCount == 2) {
     sem_post(&hackerQueue);
     sem_post(&hackerQueue);
@@ -47,12 +49,18 @@ void hackers() {
     hackersCount = 0;
     capitan = 1;
     } else {
+      // sem_wait(&impresion);
+      // printf("No hay dos hackers y dos serfs\n");
+      // sem_post(&impresion);
       sem_post(&mutex);
     }
   }
+  // sem_wait(&impresion);
+  // printf("Hacker con id %d agregado a la cola\n", syscall(SYS_gettid));
+  // sem_post(&impresion);
   sem_wait(&hackerQueue);
 
-  board();
+  board(0);
   pthread_barrier_wait(&barrier);
 
   if(capitan) {
@@ -85,9 +93,12 @@ void serfs() {
       sem_post(&mutex);
     }
   }
+  // sem_wait(&impresion);
+  // printf("Serf con id %d agregado a la cola\n", syscall(SYS_gettid));
+  // sem_post(&impresion);
   sem_wait(&serfQueue);
 
-  board();
+  board(1);
   pthread_barrier_wait(&barrier);
 
   if(capitan) {
@@ -103,6 +114,7 @@ int main() {
   sem_init(&hackerQueue, 0, 0);
   sem_init(&serfQueue, 0, 0);
   pthread_barrier_init (&barrier, NULL, 4);
+  int ran;
   while(botes < 10) {
     ran = rand()%2;
     void (*funciones[])() = {&hackers, &serfs};
